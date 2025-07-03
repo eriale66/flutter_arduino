@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'recent_temperatures.dart';
+import 'trollface_mode.dart';
 
 void main() {
   runApp(MyApp());
@@ -37,8 +38,8 @@ class _MainScreenState extends State<MainScreen> {
   
   final List<Widget> _screens = [
     TemperatureScreen(),
-    HistoryScreen(),
-    TrollScreen(),
+    RecentTemperatureScreen(),
+    TrollfaceModeScreen(),
   ];
 
   void _toggleTrollMode() async {
@@ -81,8 +82,8 @@ class _MainScreenState extends State<MainScreen> {
                 label: 'Principal',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.history),
-                label: 'Historial',
+                icon: Icon(Icons.analytics),
+                label: 'Gráficas',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.face),
@@ -98,7 +99,7 @@ class _MainScreenState extends State<MainScreen> {
             color: Colors.black.withOpacity(0.3),
             child: Center(
               child: Image.asset(
-                '/assets/images/trollfaceborrosojpg.jpg',
+                'assets/images/trollface.png',
                 width: 200,
                 height: 200,
               ),
@@ -216,7 +217,32 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                 ],
               ),
               
-              SizedBox(height: 40),
+              SizedBox(height: 30),
+              
+              // Estadísticas rápidas
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Promedio',
+                      '${TemperatureHistory.getAverageTemperature().toStringAsFixed(1)}°C',
+                      Icons.trending_up,
+                      Color(0xFF38B2AC),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Máximo',
+                      '${TemperatureHistory.getMaxTemperature().toStringAsFixed(1)}°C',
+                      Icons.arrow_upward,
+                      Color(0xFFE53E3E),
+                    ),
+                  ),
+                ],
+              ),
+              
+              SizedBox(height: 24),
               
               // Tarjeta de Temperatura
               Container(
@@ -305,6 +331,25 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
                         ),
                       ],
                     ),
+                    Spacer(),
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Color(0xFF4299E1).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${_humidity.toInt()}%',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF4299E1),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -345,6 +390,44 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
     );
   }
 
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2D3748),
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF718096),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -352,255 +435,10 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
   }
 }
 
-// Pantalla de Historial
-class HistoryScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFF5F7FA), Color(0xFFE8EAF6)],
-        ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Temperaturas Recientes',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D3748),
-                ),
-              ),
-              
-              SizedBox(height: 24),
-              
-              // Gráfica de temperatura
-              Container(
-                height: 250,
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 15,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: LineChart(
-                  LineChartData(
-                    gridData: FlGridData(show: false),
-                    titlesData: FlTitlesData(show: false),
-                    borderData: FlBorderData(show: false),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: TemperatureHistory.getTemperatureSpots(),
-                        isCurved: true,
-                        color: Color(0xFF6C63FF),
-                        barWidth: 3,
-                        dotData: FlDotData(
-                          show: true,
-                          getDotPainter: (spot, percent, barData, index) {
-                            return FlDotCirclePainter(
-                              radius: 4,
-                              color: Color(0xFF6C63FF),
-                              strokeWidth: 2,
-                              strokeColor: Colors.white,
-                            );
-                          },
-                        ),
-                        belowBarData: BarAreaData(
-                          show: true,
-                          color: Color(0xFF6C63FF).withOpacity(0.1),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              
-              SizedBox(height: 24),
-              
-              // Gráfica de humedad
-              Container(
-                height: 250,
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 15,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: LineChart(
-                  LineChartData(
-                    gridData: FlGridData(show: false),
-                    titlesData: FlTitlesData(show: false),
-                    borderData: FlBorderData(show: false),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: TemperatureHistory.getHumiditySpots(),
-                        isCurved: true,
-                        color: Color(0xFF4299E1),
-                        barWidth: 3,
-                        dotData: FlDotData(
-                          show: true,
-                          getDotPainter: (spot, percent, barData, index) {
-                            return FlDotCirclePainter(
-                              radius: 4,
-                              color: Color(0xFF4299E1),
-                              strokeWidth: 2,
-                              strokeColor: Colors.white,
-                            );
-                          },
-                        ),
-                        belowBarData: BarAreaData(
-                          show: true,
-                          color: Color(0xFF4299E1).withOpacity(0.1),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Pantalla Troll
-class TrollScreen extends StatefulWidget {
-  @override
-  _TrollScreenState createState() => _TrollScreenState();
-}
-
-class _TrollScreenState extends State<TrollScreen> {
-  bool _trollActive = false;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-
-  void _toggleTroll() async {
-    setState(() {
-      _trollActive = !_trollActive;
-    });
-    
-    if (_trollActive) {
-      await _audioPlayer.play(AssetSource('sounds/troll_music.mp3'));
-    } else {
-      await _audioPlayer.stop();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFF5F7FA), Color(0xFFE8EAF6)],
-            ),
-          ),
-          child: SafeArea(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Modo Troll',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D3748),
-                    ),
-                  ),
-                  
-                  SizedBox(height: 40),
-                  
-                  GestureDetector(
-                    onTap: _toggleTroll,
-                    child: Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.face,
-                        size: 80,
-                        color: _trollActive ? Color(0xFFE53E3E) : Color(0xFF6C63FF),
-                      ),
-                    ),
-                  ),
-                  
-                  SizedBox(height: 32),
-                  
-                  Text(
-                    _trollActive ? 'Troll Activado!' : 'Toca para activar',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Color(0xFF718096),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        
-        if (_trollActive)
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.black.withOpacity(0.3),
-            child: Center(
-              child: Image.asset(
-                'assets/images/trollface.png',
-                width: 300,
-                height: 300,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  @override
-  void dispose() {
-    _audioPlayer.dispose();
-    super.dispose();
-  }
-}
-
 // Clase para manejar el historial de temperaturas
 class TemperatureHistory {
   static List<TemperatureReading> _readings = [];
-  static const int maxReadings = 20;
+  static const int maxReadings = 30;
 
   static void addReading(double temperature, double humidity) {
     _readings.add(TemperatureReading(
@@ -614,16 +452,28 @@ class TemperatureHistory {
     }
   }
 
-  static List<FlSpot> getTemperatureSpots() {
-    return _readings.asMap().entries.map((entry) {
-      return FlSpot(entry.key.toDouble(), entry.value.temperature);
-    }).toList();
+  static List<TemperatureReading> get readings => _readings;
+
+  static double getAverageTemperature() {
+    if (_readings.isEmpty) return 0.0;
+    double sum = _readings.fold(0.0, (sum, reading) => sum + reading.temperature);
+    return sum / _readings.length;
   }
 
-  static List<FlSpot> getHumiditySpots() {
-    return _readings.asMap().entries.map((entry) {
-      return FlSpot(entry.key.toDouble(), entry.value.humidity);
-    }).toList();
+  static double getMaxTemperature() {
+    if (_readings.isEmpty) return 0.0;
+    return _readings.map((r) => r.temperature).reduce((a, b) => a > b ? a : b);
+  }
+
+  static double getMinTemperature() {
+    if (_readings.isEmpty) return 0.0;
+    return _readings.map((r) => r.temperature).reduce((a, b) => a < b ? a : b);
+  }
+
+  static double getAverageHumidity() {
+    if (_readings.isEmpty) return 0.0;
+    double sum = _readings.fold(0.0, (sum, reading) => sum + reading.humidity);
+    return sum / _readings.length;
   }
 }
 
