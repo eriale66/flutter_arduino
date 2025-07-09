@@ -129,7 +129,7 @@ class _TemperatureScreenState extends State<TemperatureScreen> {
   Timer? _timer;
   
   // Cambia esta IP por la IP de tu ESP32
-  final String espIP = "192.168.1.100";
+  final String espIP = "192.168.100.20";
 
   @override
   void initState() {
